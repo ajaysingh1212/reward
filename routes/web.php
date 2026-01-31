@@ -1,18 +1,52 @@
 <?php
 
-Route::redirect('/', '/login');
+use App\Http\Controllers\RewardController;
+use Illuminate\Support\Facades\Route;
+
+/*
+|--------------------------------------------------------------------------
+| Default Route → Reward Page
+|--------------------------------------------------------------------------
+*/
+Route::get('/', [RewardController::class, 'index'])->name('reward.page');
+
+/*
+|--------------------------------------------------------------------------
+| Login Route → Only when /login is typed
+|--------------------------------------------------------------------------
+*/
+Route::get('/login', function () {
+    return view('auth.login');
+})->name('login');
+
+/*
+|--------------------------------------------------------------------------
+| Home Route → After Login (Admin Dashboard)
+|--------------------------------------------------------------------------
+*/
 Route::get('/home', function () {
     if (session('status')) {
-        return redirect()->route('admin.home')->with('status', session('status'));
+        return redirect()->route('admin.home')
+            ->with('status', session('status'));
     }
 
     return redirect()->route('admin.home');
-});
+})->middleware('auth');
+
 
 Auth::routes();
 
 Route::group(['prefix' => 'admin', 'as' => 'admin.', 'namespace' => 'Admin', 'middleware' => ['auth']], function () {
     Route::get('/', 'HomeController@index')->name('home');
+    Route::get('/home', [\App\Http\Controllers\Admin\HomeController::class, 'index'])
+        ->name('dashboard');
+
+    Route::get('/dashboard/row-data', [\App\Http\Controllers\Admin\HomeController::class, 'rowDataAjax'])
+        ->name('dashboard.rowData');
+
+    Route::get('/dashboard/winner-data', [\App\Http\Controllers\Admin\HomeController::class, 'winnerDataAjax'])
+        ->name('dashboard.winnerData');
+
     // Permissions
     Route::delete('permissions/destroy', 'PermissionsController@massDestroy')->name('permissions.massDestroy');
     Route::resource('permissions', 'PermissionsController');
@@ -88,3 +122,10 @@ Route::group(['prefix' => 'profile', 'as' => 'profile.', 'namespace' => 'Auth', 
         Route::post('profile/destroy', 'ChangePasswordController@destroy')->name('password.destroyProfile');
     }
 });
+Route::get('reward/check',[RewardController::class,'check'])->name('reward.check');
+Route::post('reward/claim',[RewardController::class,'claim'])->name('reward.claim');
+Route::get('/thank-you', function () {
+    return view('thankyou');
+})->name('thankyou');
+Route::get('/reward/status/{coupon}', [RewardController::class, 'status'])
+    ->name('reward.status');
